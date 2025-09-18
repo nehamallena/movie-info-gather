@@ -2,58 +2,34 @@ from flask import Flask, render_template, request
 import requests
 
 app = Flask(__name__)
-OMDB_API_KEY = "81c5cb0c"  # Replace with your OMDb API key
 
-DEFAULT_MOVIES = [
-    "Inception", "The Matrix", "Interstellar", "The Dark Knight",
-    "Titanic", "Pulp Fiction", "Fight Club", "Forrest Gump",
-    "Avengers: Endgame", "Gladiator", "The Godfather", "Joker"
-]
+API_KEY = "your_api_key_here"  # Replace with your OMDb API key
+BASE_URL = "http://www.omdbapi.com/"
 
-def fetch_movie(title):
-    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}"
-    response = requests.get(url)
-    data = response.json()
-    if data.get("Response") == "True":
-        return data
-    return None
+@app.route("/", methods=["GET", "POST"])
+def home():
+    movie = None
+    related_movies = None
+    default_movies = []
 
-def fetch_search(title):
-    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={title}"
-    response = requests.get(url)
-    data = response.json()
-    if data.get("Response") == "True":
-        return data.get("Search", [])
-    return []
+    if request.method == "POST":
+        movie_name = request.form["movie"]
+        response = requests.get(BASE_URL, params={"t": movie_name, "apikey": API_KEY})
+        movie = response.json()
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    movie_data = None
-    related_movies = []
+        # fetch related movies if search successful
+        if "Title" in movie:
+            search_resp = requests.get(BASE_URL, params={"s": movie["Title"].split()[0], "apikey": API_KEY})
+            data = search_resp.json()
+            related_movies = data.get("Search", [])
+    else:
+        # default movies for carousel/grid
+        default_titles = ["Inception", "Avatar", "Titanic", "Avengers", "The Dark Knight"]
+        for t in default_titles:
+            resp = requests.get(BASE_URL, params={"t": t, "apikey": API_KEY})
+            default_movies.append(resp.json())
 
-    if request.method == 'POST':
-        movie_title = request.form.get('movie', '').strip()
-        if movie_title:
-            movie_data = fetch_movie(movie_title)
-            if not movie_data:
-                movie_data = {"Error": "Movie not found!"}
-            else:
-                related_movies = fetch_search(movie_title)
-                related_movies = [
-                    m for m in related_movies if m['Title'].lower() != movie_title.lower()
-                ]
+    return render_template("index.html", movie=movie, related_movies=related_movies, default_movies=default_movies)
 
-    default_movies_data = []
-    if not movie_data:
-        default_movies_data = [fetch_movie(title) for title in DEFAULT_MOVIES]
-        default_movies_data = [movie for movie in default_movies_data if movie]
-
-    return render_template(
-        'index.html',
-        movie=movie_data,
-        related_movies=related_movies,
-        default_movies=default_movies_data,
-    )
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
