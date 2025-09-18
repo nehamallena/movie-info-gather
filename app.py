@@ -1,56 +1,58 @@
-from flask import Flask, render_template, request
-import requests
- 
-app = Flask(__name__)
-OMDB_API_KEY = "81c5cb0c"  # Replace with your OMDb API key
- 
-DEFAULT_MOVIES = [
-    "Inception", "The Matrix", "Interstellar", "The Dark Knight",
-    "Titanic", "Pulp Fiction", "Fight Club", "Forrest Gump",
-    "Avengers: Endgame", "Gladiator", "The Godfather", "Joker"
-]
- 
-def fetch_movie(title):
-    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}"
-    response = requests.get(url)
-    data = response.json()
-    if data.get("Response") == "True":
-        return data
-    return None
- 
-def fetch_search(title):
-    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={title}"
-    response = requests.get(url)
-    data = response.json()
-    if data.get("Response") == "True":
-        return data.get("Search", [])
-    return []
- 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    movie_data = None
-    related_movies = []
-    if request.method == 'POST':
-        movie_title = request.form.get('movie', '').strip()
-        if movie_title:
-            movie_data = fetch_movie(movie_title)
-            if not movie_data:
-                movie_data = {"Error": "Movie not found!"}
-            else:
-                related_movies = fetch_search(movie_title)
-                related_movies = [m for m in related_movies if m['Title'].lower() != movie_title.lower()]
- 
-    default_movies_data = []
-    if not movie_data:
-        default_movies_data = [fetch_movie(title) for title in DEFAULT_MOVIES]
-        default_movies_data = [movie for movie in default_movies_data if movie]
- 
-    return render_template(
-        'index.html',
-        movie=movie_data,
-        related_movies=related_movies,
-        default_movies=default_movies_data,
-    )
- 
-if __name__ == '__main__':
-    app.run(debug=True)
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Movie Finder</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-dark text-light">
+<div class="container mt-4">
+    <h1 class="text-center">🎬 Movie Finder</h1>
+
+    <!-- Search Form -->
+    <form method="POST" class="d-flex justify-content-center mb-4">
+        <input type="text" name="movie" class="form-control w-50" placeholder="Enter movie name...">
+        <button class="btn btn-primary ms-2">Search</button>
+    </form>
+
+    <!-- Movie Details -->
+    {% if movie %}
+        <div class="card mb-4 p-3 bg-secondary">
+            <h2>{{ movie.Title }} ({{ movie.Year }})</h2>
+            <p><strong>Genre:</strong> {{ movie.Genre }}</p>
+            <p><strong>Plot:</strong> {{ movie.Plot }}</p>
+            <img src="{{ movie.Poster }}" alt="Poster" style="max-height:300px;">
+        </div>
+    {% endif %}
+
+    <!-- Related Movies -->
+    {% if related_movies %}
+        <h3>🔗 Related Movies:</h3>
+        <div class="row">
+            {% for rm in related_movies %}
+                <div class="col-md-3 mb-3">
+                    <div class="card p-2">
+                        <h5>{{ rm.Title }}</h5>
+                        <img src="{{ rm.Poster }}" style="max-height:200px;">
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Default Movies -->
+    {% if default_movies %}
+        <h3>🔥 Popular Movies:</h3>
+        <div class="row">
+            {% for dm in default_movies %}
+                <div class="col-md-3 mb-3">
+                    <div class="card p-2">
+                        <h5>{{ dm.Title }}</h5>
+                        <img src="{{ dm.Poster }}" style="max-height:200px;">
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+</body>
+</html>
