@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Movie Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div class="search-bar">
+        <form method="POST">
+            <input type="text" name="movie" placeholder="Search movies..." required />
+            <button type="submit">Search</button>
+        </form>
+    </div>
+ 
+    {% if movie %}
+        <div class="search-result">
+            {% if movie.get('Error') %}
+                <p class="error">{{ movie['Error'] }}</p>
+            {% else %}
+                <div class="movie-card">
+                    {% if movie['Poster'] != 'N/A' %}
+                        <img src="{{ movie['Poster'] }}" alt="{{ movie['Title'] }}" />
+                    {% endif %}
+                    <h2>{{ movie['Title'] }} ({{ movie['Year'] }})</h2>
+                    <p><strong>Rating:</strong> {{ movie['imdbRating'] }}</p>
+                    <p><strong>Plot:</strong> {{ movie['Plot'] }}</p>
+                </div>
+            {% endif %}
+        </div>
+ 
+        {% if related_movies %}
+            <h3 class="related-title">Related Movies</h3>
+            <div class="related-movies">
+                {% for m in related_movies %}
+                    <div class="related-movie-tile">
+                        {% if m.Poster != 'N/A' %}
+                            <img src="{{ m.Poster }}" alt="{{ m.Title }}">
+                        {% else %}
+                            <div class="no-poster">No Image</div>
+                        {% endif %}
+                        <p>{{ m.Title }} ({{ m.Year }})</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+ 
+    {% if not movie %}
+        <!-- Carousel -->
+        <div class="carousel-wrapper">
+          <button id="carousel-left" class="carousel-btn">&#9664;</button>
+          <div class="carousel" id="carousel">
+            {% for movie in default_movies[:9] %}
+              {% if movie['Poster'] != 'N/A' %}
+                <div class="carousel-item">
+                  <img src="{{ movie['Poster'] }}" alt="{{ movie['Title'] }}" />
+                  <p>{{ movie['Title'] }}</p>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <button id="carousel-right" class="carousel-btn">&#9654;</button>
+        </div>
+ 
+        <!-- Movie grid -->
+        <div class="movie-grid">
+            {% for movie in default_movies %}
+                <div class="movie-tile">
+                    {% if movie['Poster'] != 'N/A' %}
+                        <img src="{{ movie['Poster'] }}" alt="{{ movie['Title'] }}" />
+                    {% endif %}
+                    <p>{{ movie['Title'] }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+ 
+<script>
+  const carousel = document.getElementById('carousel');
+  const btnLeft = document.getElementById('carousel-left');
+  const btnRight = document.getElementById('carousel-right');
+ 
+  const itemWidth = 220 + 20;
+ 
+  btnLeft.addEventListener('click', () => {
+    carousel.scrollBy({ left: -itemWidth * 3, behavior: 'smooth' });
+  });
+ 
+  btnRight.addEventListener('click', () => {
+    carousel.scrollBy({ left: itemWidth * 3, behavior: 'smooth' });
+  });
+</script>
+ 
+</body>
+</html>
+ 
