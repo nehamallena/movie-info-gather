@@ -1,0 +1,56 @@
+from flask import Flask, render_template, request
+import requests
+ 
+app = Flask(__name__)
+OMDB_API_KEY = "81c5cb0c"  # Replace with your OMDb API key
+ 
+DEFAULT_MOVIES = [
+    "Inception", "The Matrix", "Interstellar", "The Dark Knight",
+    "Titanic", "Pulp Fiction", "Fight Club", "Forrest Gump",
+    "Avengers: Endgame", "Gladiator", "The Godfather", "Joker"
+]
+ 
+def fetch_movie(title):
+    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}"
+    response = requests.get(url)
+    data = response.json()
+    if data.get("Response") == "True":
+        return data
+    return None
+ 
+def fetch_search(title):
+    url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={title}"
+    response = requests.get(url)
+    data = response.json()
+    if data.get("Response") == "True":
+        return data.get("Search", [])
+    return []
+ 
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    movie_data = None
+    related_movies = []
+    if request.method == 'POST':
+        movie_title = request.form.get('movie', '').strip()
+        if movie_title:
+            movie_data = fetch_movie(movie_title)
+            if not movie_data:
+                movie_data = {"Error": "Movie not found!"}
+            else:
+                related_movies = fetch_search(movie_title)
+                related_movies = [m for m in related_movies if m['Title'].lower() != movie_title.lower()]
+ 
+    default_movies_data = []
+    if not movie_data:
+        default_movies_data = [fetch_movie(title) for title in DEFAULT_MOVIES]
+        default_movies_data = [movie for movie in default_movies_data if movie]
+ 
+    return render_template(
+        'index.html',
+        movie=movie_data,
+        related_movies=related_movies,
+        default_movies=default_movies_data,
+    )
+ 
+if __name__ == '__main__':
+    app.run(debug=True)
