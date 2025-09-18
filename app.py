@@ -1,58 +1,35 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Movie Finder</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-</head>
-<body class="bg-dark text-light">
-<div class="container mt-4">
-    <h1 class="text-center">🎬 Movie Finder</h1>
+from flask import Flask, render_template, request
+import requests
 
-    <!-- Search Form -->
-    <form method="POST" class="d-flex justify-content-center mb-4">
-        <input type="text" name="movie" class="form-control w-50" placeholder="Enter movie name...">
-        <button class="btn btn-primary ms-2">Search</button>
-    </form>
+app = Flask(__name__)
 
-    <!-- Movie Details -->
-    {% if movie %}
-        <div class="card mb-4 p-3 bg-secondary">
-            <h2>{{ movie.Title }} ({{ movie.Year }})</h2>
-            <p><strong>Genre:</strong> {{ movie.Genre }}</p>
-            <p><strong>Plot:</strong> {{ movie.Plot }}</p>
-            <img src="{{ movie.Poster }}" alt="Poster" style="max-height:300px;">
-        </div>
-    {% endif %}
+API_KEY = "your_api_key_here"  # Replace with your OMDb API key
+BASE_URL = "http://www.omdbapi.com/"
 
-    <!-- Related Movies -->
-    {% if related_movies %}
-        <h3>🔗 Related Movies:</h3>
-        <div class="row">
-            {% for rm in related_movies %}
-                <div class="col-md-3 mb-3">
-                    <div class="card p-2">
-                        <h5>{{ rm.Title }}</h5>
-                        <img src="{{ rm.Poster }}" style="max-height:200px;">
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+@app.route("/", methods=["GET", "POST"])
+def home():
+    movie = None
+    related_movies = None
+    default_movies = []
 
-    <!-- Default Movies -->
-    {% if default_movies %}
-        <h3>🔥 Popular Movies:</h3>
-        <div class="row">
-            {% for dm in default_movies %}
-                <div class="col-md-3 mb-3">
-                    <div class="card p-2">
-                        <h5>{{ dm.Title }}</h5>
-                        <img src="{{ dm.Poster }}" style="max-height:200px;">
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-</div>
-</body>
-</html>
+    if request.method == "POST":
+        movie_name = request.form["movie"]
+        response = requests.get(BASE_URL, params={"t": movie_name, "apikey": API_KEY})
+        movie = response.json()
+
+        # fetch related movies if search successful
+        if "Title" in movie:
+            search_resp = requests.get(BASE_URL, params={"s": movie["Title"].split()[0], "apikey": API_KEY})
+            data = search_resp.json()
+            related_movies = data.get("Search", [])
+    else:
+        # default movies for carousel/grid
+        default_titles = ["Inception", "Avatar", "Titanic", "Avengers", "The Dark Knight"]
+        for t in default_titles:
+            resp = requests.get(BASE_URL, params={"t": t, "apikey": API_KEY})
+            default_movies.append(resp.json())
+
+    return render_template("index.html", movie=movie, related_movies=related_movies, default_movies=default_movies)
+
+if __name__ == "__main__":
+    app.run(debug=True)
